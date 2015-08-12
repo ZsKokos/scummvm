@@ -664,6 +664,7 @@ protected:
 	// Gui
 	void gui_drawPlayField(bool refresh);
 	void gui_restorePlayField();
+	void gui_drawMap();
 	void gui_drawAllCharPortraitsWithStats();
 	void gui_drawCharPortraitWithStats(int index);
 	void gui_drawFaceShape(int index);

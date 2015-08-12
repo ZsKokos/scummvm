@@ -75,6 +75,116 @@ void EoBCoreEngine::gui_drawAllCharPortraitsWithStats() {
 		gui_drawCharPortraitWithStats(i);
 }
 
+void EoBCoreEngine::gui_drawMap() {
+	int id = 1;
+	static const uint8 x[] = { 0, 20, 0 };
+	static const uint8 y[] = { 0, 0, 96 };
+	//drawSequenceBitmap("MAP", 1, x[id], y[id], 0);
+	{
+		int destRect = 1;
+		int x1 = x[id];
+		int y1 = y[id];
+		int page = 0;
+		static const uint8 frameX[] = { 1, 0 };
+		static const uint8 frameY[] = { 8, 0 };
+		static const uint8 frameW[] = { 20, 40 };
+		static const uint8 frameH[] = { 96, 121 };
+		if (scumm_stricmp(_dialogueLastBitmap, "MAP")) {
+			_screen->loadEoBBitmap("MAP", 0, 3, 3, 2);
+			strcpy(_dialogueLastBitmap, "MAP");
+		}
+		debug("drawing map...");
+		// _wllWallFlags[_levelBlockProperties[_currentBlock].walls[0]]
+		debug("_currentBlock 0x%04x", _currentBlock );
+		/* struct LevelBlockProperty {
+			uint8 walls[4];
+			uint16 assignedObjects;
+			uint16 drawObjects;
+			uint8 direction;
+			uint16 flags;
+		}; */
+		/*int EoBCoreEngine::calcNewBlockPositionAndTestPassability(uint16 curBlock, uint16 direction) {
+			uint16 b = calcNewBlockPosition(curBlock, direction);
+			int w = _levelBlockProperties[b].walls[direction ^ 2];
+			int f = _wllWallFlags[w];
+
+			assert((_flags.gameID == GI_EOB1 && w < 70) || (_flags.gameID == GI_EOB2 && w < 80));
+
+			if (_flags.gameID == GI_EOB2 && w == 74 && _currentBlock == curBlock) {
+				for (int i = 0; i < 5; i++) {
+					if (_wallsOfForce[i].block == b) {
+						destroyWallOfForce(i);
+						f = _wllWallFlags[0];
+					}
+				}
+			}
+
+			if (!(f & 1) || _levelBlockProperties[b].flags & 7)
+				return -1;
+
+			return b;
+			}
+		*/
+
+		debug("_levelBlockProperties[_currentBlock].walls[0,1,2,3] %d %d %d %d"
+			, _levelBlockProperties[_currentBlock].walls[0]
+			, _levelBlockProperties[_currentBlock].walls[1]
+			, _levelBlockProperties[_currentBlock].walls[2]
+			, _levelBlockProperties[_currentBlock].walls[3]
+			);
+		debug("_levelBlockProperties[_currentBlock].direction %d", _levelBlockProperties[_currentBlock].direction);
+		debug("_levelBlockProperties[_currentBlock].flags %d", _levelBlockProperties[_currentBlock].flags);
+		debug("_wllWallFlags[_levelBlockProperties[_currentBlock].walls[0,1,2,3]] 0x%02x 0x%02x 0x%02x 0x%02x"
+			, _wllWallFlags[_levelBlockProperties[_currentBlock].walls[0]]
+			, _wllWallFlags[_levelBlockProperties[_currentBlock].walls[1]]
+			, _wllWallFlags[_levelBlockProperties[_currentBlock].walls[2]]
+			, _wllWallFlags[_levelBlockProperties[_currentBlock].walls[3]]
+			);
+		_screen->copyRegion(x1 << 3, y1, frameX[destRect] << 3, frameY[destRect], frameW[destRect] << 3, frameH[destRect], 2, page, Screen::CR_NO_P_CHECK);
+
+
+		/*
+		void EoBCoreEngine::drawSequenceBitmap(const char *file, int destRect, int x1, int y1, int flags) {
+		static const uint8 frameX[] = { 1, 0 };
+		static const uint8 frameY[] = { 8, 0 };
+		static const uint8 frameW[] = { 20, 40 };
+		static const uint8 frameH[] = { 96, 121 };
+
+		int page = ((flags & 2) || destRect) ? 0 : 6;
+
+		if (scumm_stricmp(_dialogueLastBitmap, file)) {
+			if (!destRect) {
+				if (!(flags & 1)) {
+					_screen->loadEoBBitmap("BORDER", 0, 3, 3, 2);
+					_screen->copyRegion(0, 0, 0, 0, 184, 121, 2, page, Screen::CR_NO_P_CHECK);
+				}
+				else {
+					_screen->copyRegion(0, 0, 0, 0, 184, 121, 0, page, Screen::CR_NO_P_CHECK);
+				}
+
+				if (!page)
+					_screen->copyRegion(0, 0, 0, 0, 184, 121, 2, 6, Screen::CR_NO_P_CHECK);
+			}
+
+			_screen->loadEoBBitmap(file, 0, 3, 3, 2);
+			strcpy(_dialogueLastBitmap, file);
+		}
+
+		if (flags & 2)
+			_screen->crossFadeRegion(x1 << 3, y1, frameX[destRect] << 3, frameY[destRect], frameW[destRect] << 3, frameH[destRect], 2, page);
+		else
+			_screen->copyRegion(x1 << 3, y1, frameX[destRect] << 3, frameY[destRect], frameW[destRect] << 3, frameH[destRect], 2, page, Screen::CR_NO_P_CHECK);
+
+		if (page == 6)
+			_screen->copyRegion(0, 0, 0, 0, 184, 121, 6, 0, Screen::CR_NO_P_CHECK);
+			*/
+
+		_screen->updateScreen();
+	}
+	// _screen->printText("BLA", 0, 0, 8, guiSettings()->colors.fill);
+	//displayParchment(-1);
+}
+
 void EoBCoreEngine::gui_drawCharPortraitWithStats(int index) {
 	if (!testCharacter(index, 1))
 		return;
@@ -1076,6 +1186,7 @@ int EoBCoreEngine::clickedPortraitRestore(Button *button) {
 
 int EoBCoreEngine::clickedUpArrow(Button *button) {
 	int b = calcNewBlockPositionAndTestPassability(_currentBlock, _currentDirection);
+	debug("clickedUpArrow _currentBlock=0x%04x _currentDirection=0x%04x b=%d", _currentBlock, _currentDirection, b);
 
 	if (b == -1) {
 		notifyBlockNotPassable();
@@ -2022,6 +2133,7 @@ void GUI_EoB::runCampMenu() {
 	int newMenu = 0;
 	int lastMenu = -1;
 	bool redrawPortraits = false;
+	bool redrawMap = true;
 
 	_charSelectRedraw = false;
 	_needRest = false;
@@ -2221,7 +2333,11 @@ void GUI_EoB::runCampMenu() {
 			}
 		}
 
-		_charSelectRedraw = redrawPortraits = false;
+		if (redrawMap) {
+			_vm->gui_drawMap();
+		}
+
+		_charSelectRedraw = redrawPortraits = redrawMap = false;
 
 		if (prevHighlightButton != highlightButton && newMenu == -1 && runLoop) {
 			drawMenuButton(prevHighlightButton, false, false, true);
