@@ -76,27 +76,27 @@ void EoBCoreEngine::gui_drawAllCharPortraitsWithStats() {
 }
 
 void EoBCoreEngine::gui_drawMap() {
-	int id = 1;
+	// int id = 1;
 	static const uint8 x[] = { 0, 20, 0 };
 	static const uint8 y[] = { 0, 0, 96 };
 	//drawSequenceBitmap("MAP", 1, x[id], y[id], 0);
 	{
-		int destRect = 1;
-		int x1 = x[id];
-		int y1 = y[id];
-		int page = 0;
-		static const uint8 frameX[] = { 1, 0 };
-		static const uint8 frameY[] = { 8, 0 };
-		static const uint8 frameW[] = { 20, 40 };
-		static const uint8 frameH[] = { 96, 121 };
+		int destRect = 2; // 1;
+		//int x1 = x[id];
+		//int y1 = y[id];
+		//int page = 0;
+		static const uint8 frameX[] = { 1, 0, 20 };
+		static const uint8 frameY[] = { 8, 0, 0 };
+		static const uint8 frameW[] = { 20, 40, 1 };
+		static const uint8 frameH[] = { 96, 200, 7 };
+		/*
 		if (scumm_stricmp(_dialogueLastBitmap, "MAP")) {
 			_screen->loadEoBBitmap("MAP", 0, 3, 3, 2);
 			strcpy(_dialogueLastBitmap, "MAP");
 		}
 		debug("drawing map...");
 		// _wllWallFlags[_levelBlockProperties[_currentBlock].walls[0]]
-		debug("_currentBlock 0x%04x", _currentBlock );
-		/* struct LevelBlockProperty {
+		struct LevelBlockProperty {
 			uint8 walls[4];
 			uint16 assignedObjects;
 			uint16 drawObjects;
@@ -125,7 +125,7 @@ void EoBCoreEngine::gui_drawMap() {
 			return b;
 			}
 		*/
-
+		/*
 		debug("_levelBlockProperties[_currentBlock].walls[0,1,2,3] %d %d %d %d"
 			, _levelBlockProperties[_currentBlock].walls[0]
 			, _levelBlockProperties[_currentBlock].walls[1]
@@ -140,7 +140,88 @@ void EoBCoreEngine::gui_drawMap() {
 			, _wllWallFlags[_levelBlockProperties[_currentBlock].walls[2]]
 			, _wllWallFlags[_levelBlockProperties[_currentBlock].walls[3]]
 			);
-		_screen->copyRegion(x1 << 3, y1, frameX[destRect] << 3, frameY[destRect], frameW[destRect] << 3, frameH[destRect], 2, page, Screen::CR_NO_P_CHECK);
+		*/
+		//_screen->copyRegion(x1 << 3, y1, frameX[destRect] << 3, frameY[destRect], frameW[destRect] << 3, frameH[destRect], 2, page, Screen::CR_NO_P_CHECK);
+		
+		debug("_levelBlockProperties[index].walls aaa");
+		debug("_currentBlock 0x%04x _currentDirection 0x%04x", _currentBlock, _currentDirection);
+		/* "MAP" 7x7 tile coordinates:
+		upperleft corner 74,9
+		upper-lower wall 79,9
+		upperright corner 138,33
+		lowerright corner 104,16
+		lowerleft corner 97,15
+		*/
+
+		//uint8 *dstScreen = _screen->getPagePtr(0); +y2 * SCREEN_W + x2;
+		const int tileW = 5;
+		const int tileH = 5;
+		for (uint16 index = 0; index < 32 * 32; index++) {
+			//const uint32 Block = *(uint32*)_levelBlockProperties[index].walls;
+			const uint8* walls = _levelBlockProperties[index].walls;
+			const int dstX = index % 32 * tileW + (frameX[destRect] << 3);
+			const int dstY = index / 32 * tileH + frameY[destRect];
+			
+			//debug("index = 0x%02x dstX = %d dstY = %d", index, dstX, dstY);
+
+			// North
+			_screen->drawLine(false, dstX+0, dstY+0, tileW, walls[0]);
+			_screen->drawLine(false, dstX+1, dstY+1, tileW-2, walls[0]);
+			// West
+			_screen->drawLine(true , dstX+0, dstY+0, tileH, walls[3]);
+			_screen->drawLine(true , dstX+1, dstY+1, tileH-2, walls[3]);
+			// South
+			_screen->drawLine(false, dstX+0, dstY + tileW - 1, tileW, walls[2]);
+			_screen->drawLine(false, dstX+1, dstY + tileW - 2, tileW-2, walls[2]);
+			// East
+			_screen->drawLine(true , dstX + tileH - 1, dstY+0, tileH, walls[1]);
+			_screen->drawLine(true , dstX + tileH - 2, dstY+1, tileH-2, walls[1]);
+			/*
+			int srcX = 0, srcY = 0;
+			switch (Block)
+			{
+			case 0x02020101: srcX = 138; srcY = 6; break;
+			case 0x01010202: srcX = 79; srcY = 6; break;
+			default: debug("unknown tile index=0x%08x, block=0x%08x", index, Block); break;
+			}
+			if (srcX || srcY)
+			{
+				_screen->copyRegion(srcX, srcY, dstX, dstY, frameW[destRect] << 3, frameH[destRect], 2, page, Screen::CR_NO_P_CHECK);
+			}
+			*/
+			/*
+			if (1 == index/32)
+				debugN("0x%08x ", *(uint32*)_levelBlockProperties[index].walls);
+				*/
+		}
+		{
+			//const uint8* walls = _levelBlockProperties[_currentBlock].walls;
+			const int dstX = _currentBlock % 32 * tileW + (frameX[destRect] << 3);
+			const int dstY = _currentBlock / 32 * tileH + frameY[destRect];
+			const int color = 254;
+
+			switch (_currentDirection)
+			{
+			case 0: // North
+				_screen->drawLine(false, dstX + 0, dstY + 0, tileW, color);
+				_screen->drawLine(false, dstX + 1, dstY + 1, tileW - 2, color);
+				break;
+			case 3: // West
+				_screen->drawLine(true, dstX + 0, dstY + 0, tileH, color);
+				_screen->drawLine(true, dstX + 1, dstY + 1, tileH - 2, color);
+				break;
+			case 2: // South
+				_screen->drawLine(false, dstX + 1, dstY + tileW - 2, tileW-2, color);
+				_screen->drawLine(false, dstX + 0, dstY + tileW - 3, tileW-0, color);
+				_screen->drawLine(true,	 dstX + 2, dstY + 1, tileW-1, color);
+				break;
+			case 1: // East
+				_screen->drawLine(true, dstX + tileH - 1, dstY + 0, tileH, color);
+				_screen->drawLine(true, dstX + tileH - 2, dstY + 1, tileH - 2, color);
+				break;
+			}
+		}
+		
 
 
 		/*
