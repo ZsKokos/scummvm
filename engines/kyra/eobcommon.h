@@ -664,7 +664,7 @@ protected:
 	// Gui
 	void gui_drawPlayField(bool refresh);
 	void gui_restorePlayField();
-	void gui_drawMap();
+	void gui_drawMap(int destRect);
 	void gui_drawAllCharPortraitsWithStats();
 	void gui_drawCharPortraitWithStats(int index);
 	void gui_drawFaceShape(int index);
@@ -693,6 +693,7 @@ protected:
 	int clickedInventoryNextPage(Button *button);
 	int clickedPortraitRestore(Button *button);
 	int clickedCharPortraitDefault(Button *button);
+	int clickedMap(Button *button);
 	int clickedCamp(Button *button);
 	int clickedSceneDropPickupItem(Button *button);
 	int clickedCharPortrait2(Button *button);

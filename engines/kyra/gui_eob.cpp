@@ -75,12 +75,14 @@ void EoBCoreEngine::gui_drawAllCharPortraitsWithStats() {
 		gui_drawCharPortraitWithStats(i);
 }
 
-void EoBCoreEngine::gui_drawMap() {
+void EoBCoreEngine::gui_drawMap(int destRect) {
+
 	// int id = 1;
 	static const uint8 x[] = { 0, 20, 0 };
 	static const uint8 y[] = { 0, 0, 96 };
 	//drawSequenceBitmap("MAP", 1, x[id], y[id], 0);
 	{
+
 		int destRect = 2; // 1;
 		//int x1 = x[id];
 		//int y1 = y[id];
@@ -153,6 +155,8 @@ void EoBCoreEngine::gui_drawMap() {
 		lowerleft corner 97,15
 		*/
 
+		_screen->setCurPage(2);
+
 		//uint8 *dstScreen = _screen->getPagePtr(0); +y2 * SCREEN_W + x2;
 		const int tileW = 4;
 		const int tileH = 5;
@@ -160,23 +164,43 @@ void EoBCoreEngine::gui_drawMap() {
 		for (uint16 index = 0; index < mapX * mapY; index++) {
 			//const uint32 Block = *(uint32*)_levelBlockProperties[index].walls;
 			const uint8* walls = _levelBlockProperties[index].walls;
-			const int dstX = index % mapX * tileW + (frameX[destRect] << 3);
-			const int dstY = index / mapX * tileH + frameY[destRect];
+			const int dstX = index % mapX * tileW; // +(frameX[destRect] << 3);
+			const int dstY = index / mapX * tileH; //+frameY[destRect];
 			
 			//debug("index = 0x%02x dstX = %d dstY = %d", index, dstX, dstY);
 
+			
 			// North
-			_screen->drawLine(false, dstX+0, dstY+0, tileW-0, walls[0]);
-			_screen->drawLine(false, dstX+1, dstY+1, tileW-2, walls[0]);
+			//if ( walls[0] || - 1 == calcNewBlockPositionAndTestPassability(calcNewBlockPosition(index, 0), 2))
+			{
+				//_screen->drawLine(false, dstX + 0, dstY + 0, tileW - 0, 254);
+				_screen->drawLine(false, dstX + 0, dstY + 0, tileW - 0, walls[0]);
+				_screen->drawLine(false, dstX + 1, dstY + 1, tileW - 2, walls[0]);
+			}
 			// West
-			_screen->drawLine(true , dstX+0, dstY+1, tileH-1, walls[3]);
-			_screen->drawLine(true , dstX+1, dstY+2, tileH-3, walls[3]);
+			//if (-1 == calcNewBlockPositionAndTestPassability(calcNewBlockPosition(index, 3), 1))
+			{
+				//_screen->drawLine(true, dstX + 0, dstY + 1, tileH - 1, 254);
+				_screen->drawLine(true, dstX + 0, dstY + 1, tileH - 1, walls[3]);
+				_screen->drawLine(true, dstX + 1, dstY + 2, tileH - 3, walls[3]);
+			}
 			// South
-			_screen->drawLine(false, dstX+0, dstY + tileH - 1, tileW-0, walls[2]);
-			_screen->drawLine(false, dstX+1, dstY + tileH - 2, tileW-2, walls[2]);
+			//if (-1 == calcNewBlockPositionAndTestPassability(calcNewBlockPosition(index, 2), 0))
+			{
+				//_screen->drawLine(false, dstX + 0, dstY + tileH - 1, tileW - 0, 254);
+				_screen->drawLine(false, dstX + 0, dstY + tileH - 1, tileW - 0, walls[2]);
+				_screen->drawLine(false, dstX + 1, dstY + tileH - 2, tileW - 2, walls[2]);
+			}
 			// East
-			_screen->drawLine(true , dstX + tileW - 1, dstY+1, tileH-1, walls[1]);
-			_screen->drawLine(true , dstX + tileW - 2, dstY+2, tileH-3, walls[1]);
+			//if (-1 == calcNewBlockPositionAndTestPassability(calcNewBlockPosition(index, 1), 3))
+			{
+				//_screen->drawLine(true, dstX + tileW - 1, dstY + 1, tileH - 1, 254);
+				_screen->drawLine(true, dstX + tileW - 1, dstY + 1, tileH - 1, walls[1]);
+				_screen->drawLine(true, dstX + tileW - 2, dstY + 2, tileH - 3, walls[1]);
+			}
+			
+
+
 			/*
 			int srcX = 0, srcY = 0;
 			switch (Block)
@@ -261,10 +285,11 @@ void EoBCoreEngine::gui_drawMap() {
 			_screen->copyRegion(0, 0, 0, 0, 184, 121, 6, 0, Screen::CR_NO_P_CHECK);
 			*/
 
+		_screen->setCurPage(0);
 		_screen->updateScreen();
+
+		_screen->copyRegion(0, 0, frameX[destRect] << 3, frameY[destRect], tileW * mapX, tileH * mapY, 2, 0, Screen::CR_NO_P_CHECK);
 	}
-	// _screen->printText("BLA", 0, 0, 8, guiSettings()->colors.fill);
-	//displayParchment(-1);
 }
 
 void EoBCoreEngine::gui_drawCharPortraitWithStats(int index) {
@@ -955,6 +980,10 @@ int EoBCoreEngine::clickedCharPortraitDefault(Button *button) {
 	return 0;
 }
 
+int EoBCoreEngine::clickedMap(Button *button) {
+	return button->arg;
+}
+	
 int EoBCoreEngine::clickedCamp(Button *button) {
 	gui_updateControls();
 	disableSysTimer(2);
@@ -2413,9 +2442,10 @@ void GUI_EoB::runCampMenu() {
 				_vm->sortCharacterSpellList(i);
 			}
 		}
-
+		
 		if (redrawMap) {
-			_vm->gui_drawMap();
+			_vm->gui_drawMap(0);
+			//(1);
 		}
 
 		_charSelectRedraw = redrawPortraits = redrawMap = false;
