@@ -60,6 +60,8 @@ BaseObject::BaseObject() {
 	_sequences = nullptr;
 	_images = nullptr;
 	_imageFrame = nullptr;
+	_sequenceNumber = 0;
+	_startSeq = 0;
 	_walkCount = 0;
 	_allow = 0;
 	_frameNumber = 0;
@@ -104,14 +106,14 @@ bool BaseObject::hasAborts() const {
 		// If we've started checking and we've encountered another Talk or Listen Sequence Code,
 		// then we're done checking this sequence because this is where it would repeat
 		if (startChecking && (v == TALK_SEQ_CODE || v == TALK_LISTEN_CODE))
-			return false;
+			break;
 
 		// See if we've found the beginning of a Talk Sequence
 		if ((v == TALK_SEQ_CODE && seqNum < 128) || (v == TALK_LISTEN_CODE && seqNum >= 128)) {
 			// If checking was already on and we came across one of these codes, then there couldn't
 			// have been an Allow Talk Interrupt code in the sequence we were checking, so we're done.
 			if (startChecking)
-				return false;
+				break;
 
 			seqNum--;
 			// See if we're at the correct Talk Sequence Number
@@ -132,7 +134,7 @@ bool BaseObject::hasAborts() const {
 		}
 	} while (idx < _seqSize);
 
-	return true;
+	return false;
 }
 
 void BaseObject::checkObject() {
@@ -178,6 +180,7 @@ void BaseObject::checkObject() {
 			if (IS_ROSE_TATTOO && v == ALLOW_TALK_CODE) {
 				if (_gotoSeq) {
 					setObjTalkSequence(_gotoSeq);
+					_gotoSeq = 0;
 				} else {
 					++_frameNumber;
 				}
@@ -356,6 +359,10 @@ bool BaseObject::checkEndOfSequence() {
 			// Determine next sequence to use
 			int seq = _sequences[_frameNumber + 1];
 
+			// If the object has been turned off, we're going nowhere
+			if (IS_ROSE_TATTOO && (_type == HIDE_SHAPE || _type == HIDDEN || _type == REMOVE))
+				return false;
+
 			if (seq == 99) {
 				--_frameNumber;
 				screen._backBuffer1.transBlitFrom(*_imageFrame, _position);
@@ -397,6 +404,10 @@ void BaseObject::setObjSequence(int seq, bool wait) {
 	Scene &scene = *_vm->_scene;
 	int checkFrame = _allow ? MAX_FRAME : FRAMES_END;
 
+	if (IS_ROSE_TATTOO && (seq == -1 || seq == 255))
+		// This means goto beginning
+		seq = 0;
+
 	if (seq >= 128) {
 		// Loop the sequence until the count exceeded
 		seq -= 128;
@@ -419,6 +430,10 @@ void BaseObject::setObjSequence(int seq, bool wait) {
 			if (_frameNumber >= checkFrame)
 				_frameNumber = 0;
 
+			// For Rose Tattoo, save the starting frame for new sequences
+			if (IS_ROSE_TATTOO)
+				_startSeq = _frameNumber;
+
 			_seqCounter = 0;
 			if (_sequences[_frameNumber] == 0)
 				seq = _sequences[_frameNumber + 1];
@@ -426,12 +441,18 @@ void BaseObject::setObjSequence(int seq, bool wait) {
 				return;
 		} else {
 			// Find beginning of sequence
-			do {
-				--_frameNumber;
-			} while (_frameNumber > 0 && _sequences[_frameNumber] != 0);
+			if (IS_ROSE_TATTOO) {
+				// Use the saved start of the sequence to reset the frame
+				_frameNumber = _startSeq;
+			} else {
+				// For Scalpel, scan backwards from the end of the sequence to find it's start
+				do {
+					--_frameNumber;
+				} while (_frameNumber > 0 && _sequences[_frameNumber] != 0);
 
-			if (_frameNumber != 0)
-				_frameNumber += 2;
+				if (_frameNumber != 0)
+					_frameNumber += 2;
+			}
 
 			return;
 		}
@@ -444,16 +465,35 @@ void BaseObject::setObjSequence(int seq, bool wait) {
 	int seqCc = 0;
 
 	while (seqCc < seq && idx < checkFrame) {
-		++idx;
-		if (_sequences[idx] == 0) {
-			++seqCc;
-			idx += 2;
+		if (IS_SERRATED_SCALPEL) {
+			++idx;
+
+			if (_sequences[idx] == 0) {
+				++seqCc;
+				idx += 2;
+			}
+		} else {
+			byte s = _sequences[idx];
+
+			if (s == 0) {
+				++seqCc;
+				++idx;
+			} else if (s == MOVE_CODE || s == TELEPORT_CODE) {
+				idx += 4;
+			} else if (s == CALL_TALK_CODE) {
+				idx += 8;
+			} else if (s == HIDE_CODE) {
+				idx += 2;
+			}
+
+			++idx;
 		}
 	}
 
 	if (idx >= checkFrame)
 		idx = 0;
 	_frameNumber = idx;
+	_startSeq = idx;
 
 	if (wait) {
 		seqCc = idx;
@@ -581,7 +621,7 @@ void Sprite::clear() {
 	_imageFrame = nullptr;
 	_walkCount = 0;
 	_allow = 0;
-	_frameNumber = _sequenceNumber = 0;
+	_frameNumber = 0;
 	_position.x = _position.y = 0;
 	_delta.x = _delta.y = 0;
 	_oldPosition.x = _oldPosition.y = 0;
@@ -935,7 +975,6 @@ void UseType::synchronize(Serializer &s) {
 /*----------------------------------------------------------------*/
 
 Object::Object(): BaseObject() {
-	_sequenceNumber = 0;
 	_sequenceOffset = 0;
 	_pickup = 0;
 	_defaultCommand = 0;
@@ -1189,26 +1228,16 @@ void Object::setObjTalkSequence(int seq) {
 
 	// See if we're supposed to restore the object's sequence from the talk sequence stack
 	if (seq == -1) {
-		TalkSequence &ts = talk._talkSequenceStack[_restoreSlot];
 		if (_seqTo != 0)
 			_sequences[_frameNumber] = _seqTo;
-		_frameNumber = ts._frameNumber;
-		_sequenceNumber = ts._sequenceNumber;
-		_seqStack = ts._seqStack;
-		_seqTo = ts._seqTo;
-		_seqCounter = ts._seqCounter;
-		_seqCounter2 = ts._seqCounter2;
-		_talkSeq = 0;
 
-		// Flag this slot as free again
-		ts._obj = nullptr;
-
+		talk.pullSequence(_restoreSlot);
 		return;
 	}
 
 	assert(_type != CHARACTER);
 
-	talk.pushTalkSequence(this);
+	talk.pushSequenceEntry(this);
 	int talkSeqNum = seq;
 
 	// Find where the talk sequence data begins in the object

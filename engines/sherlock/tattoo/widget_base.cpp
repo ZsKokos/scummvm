@@ -45,6 +45,8 @@ void WidgetBase::summonWindow() {
 	// Add widget to the screen
 	if (!ui._fixedWidgets.contains(this))
 		ui._widgets.push_back(this);
+	ui._windowOpen = true;
+
 	_outsideMenu = false;
 
 	draw();
@@ -56,6 +58,7 @@ void WidgetBase::banishWindow() {
 	erase();
 	_surface.free();
 	ui._widgets.remove(this);
+	ui._windowOpen = false;
 }
 
 void WidgetBase::close() {
@@ -248,28 +251,22 @@ void WidgetBase::drawScrollBar(int index, int pageSize, int count) {
 
 	// Draw the arrows on the scroll buttons
 	byte color = index ? INFO_BOTTOM + 2 : INFO_BOTTOM;
-	_surface.hLine(r.right / 2, r.top - 2 + BUTTON_SIZE / 2, r.right / 2, color);
-	_surface.fillRect(Common::Rect(r.right / 2 - 1, r.top - 1 + BUTTON_SIZE / 2,
-		r.right / 2 + 1, r.top - 1 + BUTTON_SIZE / 2), color);
-	_surface.fillRect(Common::Rect(r.right / 2 - 2, r.top + BUTTON_SIZE / 2,
-		r.right / 2 + 2, r.top + BUTTON_SIZE / 2), color);
-	_surface.fillRect(Common::Rect(r.right / 2 - 3, r.top + 1 + BUTTON_SIZE / 2,
-		r.right / 2 + 3, r.top + 1 + BUTTON_SIZE / 2), color);
+	_surface.hLine(r.left + r.width() / 2, r.top - 2 + BUTTON_SIZE / 2, r.left + r.width() / 2, color);
+	_surface.hLine(r.left + r.width() / 2 - 1, r.top - 1 + BUTTON_SIZE / 2, r.left + r.width() / 2 + 1, color);
+	_surface.hLine(r.left + r.width() / 2 - 2, r.top + BUTTON_SIZE / 2, r.left + r.width() / 2 + 2, color);
+	_surface.hLine(r.left + r.width() / 2 - 3, r.top + 1 + BUTTON_SIZE / 2, r.left + r.width() / 2 + 3, color);
 
 	color = (index + pageSize) < count ? INFO_BOTTOM + 2 : INFO_BOTTOM;
-	_surface.fillRect(Common::Rect(r.right / 2 - 3, r.bottom - 1 - BUTTON_SIZE + BUTTON_SIZE / 2,
-		r.right / 2 + 3, r.bottom - 1 - BUTTON_SIZE + BUTTON_SIZE / 2), color);
-	_surface.fillRect(Common::Rect(r.right / 2 - 2, r.bottom - 1 - BUTTON_SIZE + 1 + BUTTON_SIZE / 2,
-		r.right / 2 + 2, r.bottom - 1 - BUTTON_SIZE + 1 + BUTTON_SIZE / 2), color);
-	_surface.fillRect(Common::Rect(r.right / 2 - 1, r.bottom - 1 - BUTTON_SIZE + 2 + BUTTON_SIZE / 2,
-		r.right / 2 + 1, r.bottom - 1 - BUTTON_SIZE + 2 + BUTTON_SIZE / 2), color);
-	_surface.fillRect(Common::Rect(r.right / 2, r.bottom - 1 - BUTTON_SIZE + 3 + BUTTON_SIZE / 2,
-		r.right / 2, r.bottom - 1 - BUTTON_SIZE + 3 + BUTTON_SIZE / 2), color);
+	_surface.hLine(r.left + r.width() / 2 - 3, r.bottom - 1 - BUTTON_SIZE + BUTTON_SIZE / 2, r.left + r.width() / 2 + 3, color);
+	_surface.hLine(r.left + r.width() / 2 - 2, r.bottom - 1 - BUTTON_SIZE + 1 + BUTTON_SIZE / 2, r.left + r.width() / 2 + 2, color);
+	_surface.hLine(r.left + r.width() / 2 - 1, r.bottom - 1 - BUTTON_SIZE + 2 + BUTTON_SIZE / 2, r.left + r.width() / 2 + 1, color);
+	_surface.hLine(r.left + r.width() / 2, r.bottom - 1 - BUTTON_SIZE + 3 + BUTTON_SIZE / 2, r.left + r.width() / 2, color);
 
 	// Draw the scroll position bar
 	int barHeight = (r.height() - BUTTON_SIZE * 2) * pageSize / count;
 	barHeight = CLIP(barHeight, BUTTON_SIZE, r.height() - BUTTON_SIZE * 2);
-	int barY = r.top + BUTTON_SIZE + (r.height() - BUTTON_SIZE * 2 - barHeight) * index / (count - pageSize);
+	int barY = (count <= pageSize) ? r.top + BUTTON_SIZE : r.top + BUTTON_SIZE + 
+		(r.height() - BUTTON_SIZE * 2 - barHeight) * index / (count - pageSize);
 
 	_surface.fillRect(Common::Rect(r.left + 2, barY + 2, r.right - 2, barY + barHeight - 3), INFO_MIDDLE);
 	ui.drawDialogRect(_surface, Common::Rect(r.left, barY, r.right, barY + barHeight), true);
@@ -280,7 +277,7 @@ void WidgetBase::handleScrollbarEvents(int index, int pageSize, int count) {
 	TattooUserInterface &ui = *(TattooUserInterface *)_vm->_ui;
 	Common::Point mousePos = events.mousePos();
 
-	// If they have selected the sollbar, return with the Scroll Bar Still selected
+	// If they're dragging the scrollbar thumb, keep it selected whilst the button is being held
 	if ((events._pressed || events._released) && ui._scrollHighlight == SH_THUMBNAIL)
 		return;
 
@@ -295,7 +292,8 @@ void WidgetBase::handleScrollbarEvents(int index, int pageSize, int count) {
 	// Calculate the Scroll Position bar
 	int barHeight = (r.height() - BUTTON_SIZE * 2) * pageSize / count;
 	barHeight = CLIP(barHeight, BUTTON_SIZE, r.height() - BUTTON_SIZE * 2);
-	int barY = r.top + BUTTON_SIZE + (r.height() - BUTTON_SIZE * 2 - barHeight) * index / (count - pageSize);
+	int barY = (count <= pageSize) ? r.top + BUTTON_SIZE : r.top + BUTTON_SIZE +
+		(r.height() - BUTTON_SIZE * 2 - barHeight) * index / (count - pageSize);
 
 	if (Common::Rect(r.left, r.top, r.right, r.top + BUTTON_SIZE).contains(mousePos))
 		// Mouse on scroll up button

@@ -220,6 +220,9 @@ int ImageFrame::sDrawYSize(int scaleVal) const {
 }
 
 int ImageFrame::sDrawXOffset(int scaleVal) const {
+	if (scaleVal == SCALE_THRESHOLD)
+		return _offset.x;
+
 	int width = _offset.x;
 	int scale = scaleVal == 0 ? 1 : scaleVal;
 
@@ -227,13 +230,16 @@ int ImageFrame::sDrawXOffset(int scaleVal) const {
 		--width;
 
 	int result = width * SCALE_THRESHOLD / scale;
-	if (scaleVal >= SCALE_THRESHOLD)
+	if (scaleVal > SCALE_THRESHOLD)
 		++result;
 
 	return result;
 }
 
 int ImageFrame::sDrawYOffset(int scaleVal) const {
+	if (scaleVal == SCALE_THRESHOLD)
+		return _offset.y;
+
 	int height = _offset.y;
 	int scale = scaleVal == 0 ? 1 : scaleVal;
 
@@ -241,7 +247,7 @@ int ImageFrame::sDrawYOffset(int scaleVal) const {
 		--height;
 
 	int result = height * SCALE_THRESHOLD / scale;
-	if (scaleVal >= SCALE_THRESHOLD)
+	if (scaleVal > SCALE_THRESHOLD)
 		++result;
 
 	return result;
@@ -1026,6 +1032,7 @@ StreamingImageFile::StreamingImageFile() {
 	_scaleVal = 0;
 	_zPlacement = 0;
 	_compressed = false;
+	_active = false;
 }
 
 StreamingImageFile::~StreamingImageFile() {
@@ -1036,18 +1043,22 @@ void StreamingImageFile::load(Common::SeekableReadStream *stream, bool compresse
 	_stream = stream;
 	_compressed = compressed;
 	_frameNumber = -1;
+	_active = true;
 }
 
 void StreamingImageFile::close() {
 	delete _stream;
 	_stream = nullptr;
 	_frameNumber = -1;
+	_active = false;
 }
 
-void StreamingImageFile::getNextFrame() {
+bool StreamingImageFile::getNextFrame() {
 	// Don't proceed if we're already at the end of the stream
-	if (_stream->pos() >= _stream->size())
-		return;
+	if (_stream->pos() >= _stream->size()) {
+		_active = false;
+		return false;
+	}
 
 	// Increment frame number
 	++_frameNumber;
@@ -1080,6 +1091,8 @@ void StreamingImageFile::getNextFrame() {
 		_imageFrame.decompressFrame(_buffer + 11, true);
 		delete[] data;
 	}
+
+	return true;
 }
 
 } // End of namespace Sherlock

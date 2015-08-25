@@ -22,6 +22,7 @@
 
 #include "sherlock/tattoo/tattoo_scene.h"
 #include "sherlock/tattoo/tattoo_people.h"
+#include "sherlock/tattoo/tattoo_talk.h"
 #include "sherlock/tattoo/tattoo_user_interface.h"
 #include "sherlock/tattoo/tattoo.h"
 #include "sherlock/events.h"
@@ -42,15 +43,21 @@ struct ShapeEntry {
 	TattooPerson *_person;
 	bool _isAnimation;
 	int _yp;
+	int _ordering;
 
-	ShapeEntry(TattooPerson *person, int yp) : _shape(nullptr), _person(person), _yp(yp), _isAnimation(false) {}
-	ShapeEntry(Object *shape, int yp) : _shape(shape), _person(nullptr), _yp(yp), _isAnimation(false) {}
-	ShapeEntry(int yp) : _shape(nullptr), _person(nullptr), _yp(yp), _isAnimation(true) {}
+	ShapeEntry(TattooPerson *person, int yp, int ordering) :
+		_shape(nullptr), _person(person), _yp(yp), _isAnimation(false), _ordering(ordering) {}
+	ShapeEntry(Object *shape, int yp, int ordering) :
+		_shape(shape), _person(nullptr), _yp(yp), _isAnimation(false), _ordering(ordering) {}
+	ShapeEntry(int yp, int ordering) : 
+		_shape(nullptr), _person(nullptr), _yp(yp), _isAnimation(true), _ordering(ordering) {}
 };
 typedef Common::List<ShapeEntry> ShapeList;
 
 static bool sortImagesY(const ShapeEntry &s1, const ShapeEntry &s2) {
-	return s1._yp <= s2._yp;
+	// Objects are order by the calculated Y position first and then, when both are equal,
+	// by the order in which the entries were added
+	return s1._yp < s2._yp || (s1._yp == s2._yp && s1._ordering < s2._ordering);
 }
 
 /*----------------------------------------------------------------*/
@@ -84,7 +91,7 @@ bool TattooScene::loadScene(const Common::String &filename) {
 	}
 
 	// Set the NPC paths for the scene
-	setNPCPath(0);
+	setNPCPath(WATSON);
 
 	// Handle loading music for the scene
 	if (music._musicOn) {
@@ -94,7 +101,6 @@ bool TattooScene::loadScene(const Common::String &filename) {
 		// If it's a new song, then start it up
 		if (music._currentSongName.compareToIgnoreCase(music._nextSongName)) {
 			if (music.loadSong(music._nextSongName)) {
-				music.setMIDIVolume(music._musicVolume);
 				if (music._musicOn)
 					music.startSong();
 			}
@@ -119,6 +125,7 @@ void TattooScene::drawAllShapes() {
 	TattooPeople &people = *(TattooPeople *)_vm->_people;
 	Screen &screen = *_vm->_screen;
 	ShapeList shapeList;
+	int ordering = 0;
 
 	// Draw all objects and animations that are set to behind
 	screen.setDisplayBounds(Common::Rect(0, 0, SHERLOCK_SCREEN_WIDTH, SHERLOCK_SCREEN_HEIGHT));
@@ -149,10 +156,10 @@ void TattooScene::drawAllShapes() {
 		if (obj._type == ACTIVE_BG_SHAPE && (obj._misc == NORMAL_BEHIND || obj._misc == NORMAL_FORWARD)) {
 			if (obj._scaleVal == SCALE_THRESHOLD)
 				shapeList.push_back(ShapeEntry(&obj, obj._position.y + obj._imageFrame->_offset.y +
-					obj._imageFrame->_height));
+					obj._imageFrame->_height, ordering++));
 			else
 				shapeList.push_back(ShapeEntry(&obj, obj._position.y + obj._imageFrame->sDrawYOffset(obj._scaleVal) +
-					obj._imageFrame->sDrawYSize(obj._scaleVal)));
+					obj._imageFrame->sDrawYSize(obj._scaleVal), ordering++));
 		}
 	}
 
@@ -160,16 +167,16 @@ void TattooScene::drawAllShapes() {
 	if (_activeCAnim.active() && (_activeCAnim._zPlacement == NORMAL_BEHIND || _activeCAnim._zPlacement == NORMAL_FORWARD)) {
 		if (_activeCAnim._scaleVal == SCALE_THRESHOLD)
 			shapeList.push_back(ShapeEntry(_activeCAnim._position.y + _activeCAnim._imageFrame._offset.y +
-				_activeCAnim._imageFrame._height));
+				_activeCAnim._imageFrame._height, ordering++));
 		else
 			shapeList.push_back(ShapeEntry(_activeCAnim._position.y + _activeCAnim._imageFrame.sDrawYOffset(_activeCAnim._scaleVal) +
-				_activeCAnim._imageFrame.sDrawYSize(_activeCAnim._scaleVal)));
+				_activeCAnim._imageFrame.sDrawYSize(_activeCAnim._scaleVal), ordering++));
 	}
 
 	// Queue all active characters for drawing
 	for (int idx = 0; idx < MAX_CHARACTERS; ++idx) {
 		if (people[idx]._type == CHARACTER && people[idx]._walkLoaded)
-			shapeList.push_back(ShapeEntry(&people[idx], people[idx]._position.y / FIXED_INT_MULTIPLIER));
+			shapeList.push_back(ShapeEntry(&people[idx], people[idx]._position.y / FIXED_INT_MULTIPLIER, ordering++));
 	}
 
 	// Sort the list
@@ -296,6 +303,7 @@ void TattooScene::freeScene() {
 	TattooUserInterface &ui = *(TattooUserInterface *)_vm->_ui;
 	Scene::freeScene();
 
+	// Delete any scene overlays that were used by the scene
 	delete ui._mask;
 	delete ui._mask1;
 	ui._mask = ui._mask1 = nullptr;
@@ -346,7 +354,7 @@ void TattooScene::doBgAnim() {
 		if (people[idx]._type == CHARACTER)
 			people[idx].checkSprite();
 	}
-
+	
 	for (uint idx = 0; idx < _bgShapes.size(); ++idx) {
 		if (_bgShapes[idx]._type == ACTIVE_BG_SHAPE)
 			_bgShapes[idx].checkObject();
@@ -368,9 +376,6 @@ void TattooScene::doBgAnim() {
 	if (ui._creditsWidget.active())
 		ui._creditsWidget.blitCredits();
 
-	if (!vm._fastMode)
-		events.wait(3);
-
 	if (screen._flushScreen) {
 		screen.slamArea(screen._currentScroll.x, screen._currentScroll.y, SHERLOCK_SCREEN_WIDTH, SHERLOCK_SCREEN_HEIGHT);
 		screen._flushScreen = false;
@@ -379,6 +384,18 @@ void TattooScene::doBgAnim() {
 	screen._flushScreen = false;
 	_doBgAnimDone = true;
 	ui._drawMenu = false;
+
+	// Handle drawing tooltips
+	if (ui._menuMode == STD_MODE || ui._menuMode == LAB_MODE)
+		ui._tooltipWidget.draw();
+	if (!ui._postRenderWidgets.empty()) {
+		for (WidgetList::iterator i = ui._postRenderWidgets.begin(); i != ui._postRenderWidgets.end(); ++i)
+			(*i)->draw();
+		ui._postRenderWidgets.clear();
+	}
+
+	if (!vm._fastMode)
+		events.wait(3);
 
 	for (int idx = 1; idx < MAX_CHARACTERS; ++idx) {
 		if (people[idx]._updateNPCPath)
@@ -654,9 +671,10 @@ int TattooScene::startCAnim(int cAnimNum, int playRate) {
 
 	_activeCAnim.load(animStream, _compressed);
 
-	while (_activeCAnim.active() && !_vm->shouldQuit()) {
+	while (!_vm->shouldQuit()) {
 		// Get the next frame
-		_activeCAnim.getNextFrame();
+		if (!_activeCAnim.getNextFrame())
+			break;
 
 		// Draw the frame
 		doBgAnim();
@@ -715,7 +733,7 @@ void TattooScene::setNPCPath(int npc) {
 		return;
 
 	people[npc].clearNPC();
-	people[npc]._name = Common::String::format("WATS%.2dA", _currentScene);
+	people[npc]._npcName = Common::String::format("WATS%.2dA", _currentScene);
 
 	// If we're in the middle of a script that will continue once the scene is loaded,
 	// return without calling the path script
@@ -739,21 +757,21 @@ int TattooScene::findBgShape(const Common::Point &pt) {
 		// New frame hasn't been drawn yet
 		return -1;
 
-
-	for (int idx = (int)_bgShapes.size() - 1; idx >= 0; --idx) {
+	int result = -1;
+	for (int idx = (int)_bgShapes.size() - 1; idx >= 0 && result == -1; --idx) {
 		Object &o = _bgShapes[idx];
 
 		if (o._type != INVALID && o._type != NO_SHAPE && o._type != HIDDEN && 
 				(o._aType <= PERSON || (ui._menuMode == LAB_MODE && o._aType == SOLID))) {
 			if (o.getNewBounds().contains(pt))
-				return idx;
+				result = idx;
 		} else if (o._type == NO_SHAPE) {
 			if (o.getNoShapeBounds().contains(pt))
-				return idx;
+				result = idx;
 		}
 	}
 
-	// If no shape found, so check whether a character is highlighted
+	// Now check for the mouse being over an NPC. If so, it overrides any found bg object
 	for (int idx = 1; idx < MAX_CHARACTERS; ++idx) {
 		Person &person = people[idx];
 
@@ -769,19 +787,23 @@ int TattooScene::findBgShape(const Common::Point &pt) {
 				- charRect.height());
 
 			if (charRect.contains(pt))
-				return 1000 + idx;
+				result = 1000 + idx;
 		}
 	}
 
-	return -1;
+	return result;
 }
 
 void TattooScene::synchronize(Serializer &s) {
 	TattooEngine &vm = *(TattooEngine *)_vm;
+	TattooUserInterface &ui = *(TattooUserInterface *)_vm->_ui;
 	Scene::synchronize(s);
 
-	if (s.isLoading())
+	if (s.isLoading()) {
+		// In case we were showing the intro prologue or the ending credits, stop them
 		vm._runningProlog = false;
+		ui._creditsWidget.close();
+	}
 }
 
 int TattooScene::closestZone(const Common::Point &pt) {

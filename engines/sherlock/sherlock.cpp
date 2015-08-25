@@ -191,7 +191,7 @@ void SherlockEngine::sceneLoop() {
 }
 
 void SherlockEngine::handleInput() {
-	_canLoadSave = _ui->_menuMode == STD_MODE;
+	_canLoadSave = _ui->_menuMode == STD_MODE || _ui->_menuMode == LAB_MODE;
 	_events->pollEventsAndWait();
 	_canLoadSave = false;
 
@@ -279,4 +279,4 @@ Common::Error SherlockEngine::saveGameState(int slot, const Common::String &desc
 	return Common::kNoError;
 }
 
-} // End of namespace Comet
+} // End of namespace Sherlock

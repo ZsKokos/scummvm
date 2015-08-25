@@ -57,6 +57,7 @@ enum FixedTextId {
 	kFixedText_With,
 	kFixedText_NoEffect,
 	kFixedText_NothingToSay,
+	kFixedText_PickedUp,
 
 	kFixedText_Page,
 	kFixedText_CloseJournal,
@@ -103,11 +104,14 @@ enum FixedTextId {
 	kFixedText_AreYouSureYou,
 	kFixedText_WishToQuit,
 	kFixedText_Yes,
-	kFixedText_No
+	kFixedText_No,
+	kFixedText_EnterPassword,
+	kFixedText_CorrectPassword
 };
 
 class TattooFixedText: public FixedText {
 private:
+	const char *const *_fixedText;
 public:
 	TattooFixedText(SherlockEngine *vm);
 	virtual ~TattooFixedText() {}

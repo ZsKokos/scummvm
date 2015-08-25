@@ -20,7 +20,7 @@
  *
  */
 
-#include "sherlock/scalpel/darts.h"
+#include "sherlock/scalpel/scalpel_darts.h"
 #include "sherlock/scalpel/scalpel.h"
 
 namespace Sherlock {
@@ -377,15 +377,11 @@ void Darts::erasePowerBars() {
 int Darts::doPowerBar(const Common::Point &pt, byte color, int goToPower, bool isVertical) {
 	Events &events = *_vm->_events;
 	Screen &screen = *_vm->_screen;
-	Music &music = *_vm->_music;
 	bool done;
 	int idx = 0;
 
 	events.clearEvents();
-	if (music._musicOn)
-		music.waitTimerRoland(10);
-	else
-		events.delay(100);
+	events.delay(100);
 
 	// Display loop
 	do {
@@ -395,7 +391,7 @@ int Darts::doPowerBar(const Common::Point &pt, byte color, int goToPower, bool i
 			// Reached target power for a computer player
 			done = true;
 		else if (goToPower == 0) {
-			// Check for pres
+			// Check for press
 			if (dartHit())
 				done = true;
 		}
@@ -410,10 +406,7 @@ int Darts::doPowerBar(const Common::Point &pt, byte color, int goToPower, bool i
 			screen.slamArea(pt.x + idx, pt.y, 1, 8);
 		}
 
-		if (music._musicOn) {
-			if (!(idx % 3))
-				music.waitTimerRoland(1);
-		} else if (!(idx % 8))
+		if (!(idx % 8))
 			events.wait(1);
 	
 		++idx;
@@ -422,16 +415,16 @@ int Darts::doPowerBar(const Common::Point &pt, byte color, int goToPower, bool i
 	return MIN(idx * 100 / DARTBARSIZE, 100);
 }
 
-bool Darts::dartHit() {
+int Darts::dartHit() {
 	Events &events = *_vm->_events;
 
 	// Process pending events
 	events.pollEventsAndWait();
 
 	if (events.kbHit()) {
-		// Key was pressed, so discard it and return true
-		events.clearKeyboard();
-		return true;
+		// Key was pressed, so return it
+		Common::KeyState keyState = events.getKey();
+		return keyState.keycode;
 	}
 
 	_oldDartButtons = events._pressed;

@@ -208,6 +208,8 @@ public:
 	byte *_sequences;				// Holds animation sequences
 	ImageFile *_images;				// Sprite images
 	ImageFrame *_imageFrame;		// Pointer to shape in the images
+	int _sequenceNumber;			// Sequence being used
+	int _startSeq;					// Frame sequence starts at
 	int _walkCount;					// Walk counter
 	int _allow;						// Allowed UI commands
 	int _frameNumber;				// Frame number in rame sequence to draw
@@ -283,13 +285,11 @@ public:
 	Common::String _pickUp;				// Message for if you can't pick up object
 
 	WalkSequences _walkSequences;		// Holds animation sequences
-	int _sequenceNumber;				// Sequence being used
 	Common::Point _noShapeSize;			// Size of a NO_SHAPE
 	int _status;						// Status: open/closed, moved/not moved
 	int8 _misc;							// Miscellaneous use
 
 	// Rose Tattoo fields
-	int _startSeq;						// Frame sequence starts at
 	ImageFrame *_stopFrames[8];			// Stop/rest frame for each direction
 	ImageFile *_altImages;				// Images used for alternate NPC sequences
 	int _altSeq;						// Which of the sequences the alt graphics apply to (0: main, 1=NPC seq)
@@ -365,7 +365,6 @@ class Object: public BaseObject {
 public:
 	Common::String _name;			// Name
 	Common::String _examine;		// Examine in-depth description
-	int _sequenceNumber;
 	int _sequenceOffset;
 	int _pickup;
 	int _defaultCommand;			// Default right-click command

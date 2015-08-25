@@ -27,6 +27,7 @@
 #include "sherlock/scalpel/scalpel_people.h"
 #include "sherlock/scalpel/scalpel_saveload.h"
 #include "sherlock/scalpel/scalpel_screen.h"
+#include "sherlock/scalpel/scalpel_talk.h"
 #include "sherlock/scalpel/settings.h"
 #include "sherlock/scalpel/scalpel.h"
 #include "sherlock/sherlock.h"
@@ -275,7 +276,7 @@ void ScalpelUserInterface::handleInput() {
 			}
 
 			if (events._released && personFound)
-				talk.talk(_bgFound);
+				talk.initTalk(_bgFound);
 			else if (personFound)
 				lookScreen(pt);
 			else if (_bgFound < 1000)
@@ -1483,7 +1484,7 @@ void ScalpelUserInterface::doTalkControl() {
 	ScalpelPeople &people = *(ScalpelPeople *)_vm->_people;
 	ScalpelScreen &screen = *(ScalpelScreen *)_vm->_screen;
 	Sound &sound = *_vm->_sound;
-	Talk &talk = *_vm->_talk;
+	ScalpelTalk &talk = *(ScalpelTalk *)_vm->_talk;
 	Common::Point mousePos = events.mousePos();
 
 	_key = _oldKey = -1;
@@ -1636,17 +1637,17 @@ void ScalpelUserInterface::doTalkControl() {
 			people.setTalking(0);
 
 			if (!talk._statements[_selector]._voiceFile.empty() && sound._voices) {
-				sound.playSound(talk._statements[_selector]._voiceFile, WAIT_RETURN_IMMEDIATELY);
+				sound.playSpeech(talk._statements[_selector]._voiceFile);
 
 				// Set voices as an indicator for waiting
 				sound._voices = 2;
-				sound._speechOn = *sound._soundIsOn;
 			} else {
-				sound._speechOn = false;
+				sound._speechPlaying = false;
 			}
 
-			// Trigger to play 3DO movie
-			talk.talk3DOMovieTrigger(0);
+			if (IS_3DO)
+				// Trigger to play 3DO movie
+				talk.talk3DOMovieTrigger(0);
 
 			talk.waitForMore(talk._statements[_selector]._statement.size());
 			if (talk._talkToAbort)

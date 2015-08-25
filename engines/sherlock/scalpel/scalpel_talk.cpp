@@ -487,11 +487,10 @@ OpcodeReturn ScalpelTalk::cmdSfxCommand(const byte *&str) {
 	if (sound._voices) {
 		for (int idx = 0; idx < 8 && str[idx] != '~'; ++idx)
 			tempString += str[idx];
-		sound.playSound(tempString, WAIT_RETURN_IMMEDIATELY);
+		sound.playSpeech(tempString);
 
 		// Set voices to wait for more
 		sound._voices = 2;
-		sound._speechOn = (*sound._soundIsOn);
 	}
 
 	_wait = 1;
@@ -537,12 +536,17 @@ void ScalpelTalk::talkWait(const byte *&str) {
 	}
 }
 
-void ScalpelTalk::talk3DOMovieTrigger(int subIndex) {
-	if (!IS_3DO) {
-		// No 3DO? No movie!
-		return;
-	}
+void ScalpelTalk::nothingToSay() {
+	error("Character had no talk options available");
+}
 
+void ScalpelTalk::switchSpeaker() {
+	// If it's the 3DO, pass on to start the actor's conversation movie
+	if (IS_3DO)
+		talk3DOMovieTrigger(_3doSpeechIndex++);
+}
+
+void ScalpelTalk::talk3DOMovieTrigger(int subIndex) {
 	// Find out a few things that we need
 	int userSelector = _vm->_ui->_selector;
 	int scriptSelector = _scriptSelect;
@@ -802,6 +806,7 @@ int ScalpelTalk::talkLine(int lineNum, int stateNum, byte color, int lineY, bool
 
 void ScalpelTalk::showTalk() {
 	FixedText &fixedText = *_vm->_fixedText;
+	People &people = *_vm->_people;
 	ScalpelScreen &screen = *(ScalpelScreen *)_vm->_screen;
 	ScalpelUserInterface &ui = *(ScalpelUserInterface *)_vm->_ui;
 	Common::String fixedText_Exit = fixedText.getText(kFixedText_Window_Exit);
@@ -809,7 +814,7 @@ void ScalpelTalk::showTalk() {
 
 	clearSequences();
 	pushSequence(_talkTo);
-	setStillSeq(_talkTo);
+	people.setListenSequence(_talkTo);
 
 	ui._selector = ui._oldSelector = -1;
 
@@ -837,6 +842,85 @@ void ScalpelTalk::showTalk() {
 
 		ui._windowOpen = true;
 	}
+}
+
+OpcodeReturn ScalpelTalk::cmdCallTalkFile(const byte *&str) {
+	Common::String tempString;
+
+	++str;
+	for (int idx = 0; idx < 8 && str[idx] != '~'; ++idx)
+		tempString += str[idx];
+	str += 8;
+
+	int scriptCurrentIndex = str - _scriptStart;
+
+	// Save the current script position and new talk file
+	if (_scriptStack.size() < 9) {
+		ScriptStackEntry rec1;
+		rec1._name = _scriptName;
+		rec1._currentIndex = scriptCurrentIndex;
+		rec1._select = _scriptSelect;
+		_scriptStack.push(rec1);
+
+		// Push the new talk file onto the stack
+		ScriptStackEntry rec2;
+		rec2._name = tempString;
+		rec2._currentIndex = 0;
+		rec2._select = 100;
+		_scriptStack.push(rec2);
+	} else {
+		error("Script stack overflow");
+	}
+
+	_scriptMoreFlag = 1;
+	_endStr = true;
+	_wait = 0;
+
+	return RET_SUCCESS;
+}
+
+void ScalpelTalk::pushSequenceEntry(Object *obj) {
+	Scene &scene = *_vm->_scene;
+	SequenceEntry seqEntry;
+	seqEntry._objNum = scene._bgShapes.indexOf(*obj);
+
+	if (seqEntry._objNum != -1) {
+		for (uint idx = 0; idx < MAX_TALK_SEQUENCES; ++idx)
+			seqEntry._sequences.push_back(obj->_sequences[idx]);
+
+		seqEntry._frameNumber = obj->_frameNumber;
+		seqEntry._seqTo = obj->_seqTo;
+	}
+
+	_sequenceStack.push(seqEntry);
+	if (_scriptStack.size() >= 5)
+		error("script stack overflow");
+}
+
+void ScalpelTalk::pullSequence(int slot) {
+	Scene &scene = *_vm->_scene;
+
+	if (_sequenceStack.empty())
+		return;
+
+	SequenceEntry seq = _sequenceStack.pop();
+	if (seq._objNum != -1) {
+		Object &obj = scene._bgShapes[seq._objNum];
+
+		if (obj._seqSize < MAX_TALK_SEQUENCES) {
+			warning("Tried to restore too few frames");
+		} else {
+			for (int idx = 0; idx < MAX_TALK_SEQUENCES; ++idx)
+				obj._sequences[idx] = seq._sequences[idx];
+
+			obj._frameNumber = seq._frameNumber;
+			obj._seqTo = seq._seqTo;
+		}
+	}
+}
+
+void ScalpelTalk::clearSequences() {
+	_sequenceStack.clear();
 }
 
 } // End of namespace Scalpel

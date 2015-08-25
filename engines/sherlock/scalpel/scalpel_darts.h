@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef SHERLOCK_DARTS_H
-#define SHERLOCK_DARTS_H
+#ifndef SHERLOCK_SCALPEL_DARTS_H
+#define SHERLOCK_SCALPEL_DARTS_H
 
 #include "sherlock/image_file.h"
 
@@ -97,7 +97,7 @@ private:
 	/**
 	 * Returns true if a mouse button or key is pressed.
 	 */
-	bool dartHit();
+	int dartHit();
 	
 	/**
 	 * Return the score of the given location on the dart-board

@@ -35,7 +35,7 @@ namespace Sherlock {
 namespace Tattoo {
 
 TattooEngine::TattooEngine(OSystem *syst, const SherlockGameDescription *gameDesc) :
-		SherlockEngine(syst, gameDesc), _darts(this), _hangmanWidget(this) {
+		SherlockEngine(syst, gameDesc), _darts(this), _foolscapWidget(this) {
 	_runningProlog = false;
 	_fastMode = false;
 	_allowFastMode = true;
@@ -96,6 +96,11 @@ void TattooEngine::startScene() {
 			ui._mask1 = _res->load("res08a.msk");
 		else if (_scene->_goToScene == 18 || _scene->_goToScene == 68)
 			ui._mask1 = _res->load("res08a.msk");
+		break;
+
+	case STARTING_INTRO_SCENE:
+		// Disable input so that the intro can't be skipped until the game's logo has been shown
+		ui._lockoutTimer = STARTUP_KEYS_DISABLED_DELAY;
 		break;
 
 	case OVERHEAD_MAP:
@@ -170,28 +175,33 @@ void TattooEngine::loadInventory() {
 	inv.push_back(InventoryItem(0, inv5, invDesc5, "_ITEM05A"));
 
 	// Hidden items
-	inv.push_back(InventoryItem(0, inv6, invDesc6, "_PAP212D", solve));
-	inv.push_back(InventoryItem(0, inv7, invDesc7, "_PAP212I"));
-	inv.push_back(InventoryItem(0, inv8, invDesc8, "_LANT02I"));
+	inv.push_back(InventoryItem(295, inv6, invDesc6, "_PAP212D", solve));
+	inv.push_back(InventoryItem(294, inv7, invDesc7, "_PAP212I"));
+	inv.push_back(InventoryItem(818, inv8, invDesc8, "_LANT02I"));
 }
 
-void TattooEngine::doHangManPuzzle() {
-	_hangmanWidget.show();
+void TattooEngine::doFoolscapPuzzle() {
+	_foolscapWidget.show();
 }
 
 void TattooEngine::loadConfig() {
 	SherlockEngine::loadConfig();
 
 	_transparentMenus = ConfMan.getBool("transparent_windows");
-	_textWindowsOn = ConfMan.getBool("text_windows");
+	_textWindowsOn = ConfMan.getBool("subtitles") || !_sound->_speechOn;
 }
 
 void TattooEngine::saveConfig() {
 	SherlockEngine::saveConfig();
 
 	ConfMan.setBool("transparent_windows", _transparentMenus);
-	ConfMan.setBool("text_windows", _textWindowsOn);
+	ConfMan.setBool("subtitles", _textWindowsOn);
 	ConfMan.flushToDisk();
+}
+
+bool TattooEngine::canSaveGameStateCurrently() {
+	TattooUserInterface &ui = *(TattooUserInterface *)_ui;
+	return _canLoadSave && !ui._creditsWidget.active() && !_runningProlog;
 }
 
 } // End of namespace Tattoo

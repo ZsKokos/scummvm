@@ -153,10 +153,7 @@ bool Journal::drawJournal(int direction, int howFar) {
 		// or a searched for keyword is found
 		for (temp = 0; (temp < (howFar / LINES_PER_PAGE)) && !endJournal && !searchSuccessful; ++temp) {
 			// Handle animating mouse cursor
-			int cursorNum = (int)events.getCursor() + 1;
-			if (cursorNum >(WAIT + 2))
-				cursorNum = WAIT;
-			events.setCursor((CursorId)cursorNum);
+			events.animateCursorIfNeeded();
 
 			lineNum = 0;
 			savedIndex = _index;
@@ -409,6 +406,8 @@ void Journal::loadJournalFile(bool alreadyLoaded) {
 	bool commentJustPrinted = false;
 	const byte *replyP = (const byte *)statement._reply.c_str();
 	const int inspectorId = (IS_SERRATED_SCALPEL) ? 2 : 18;
+	int beforeLastSpeakerChange = journalString.size();
+	bool justChangedSpeaker = true;
 
 	while (*replyP) {
 		byte c = *replyP++;
@@ -427,15 +426,11 @@ void Journal::loadJournalFile(bool alreadyLoaded) {
 		if (c < opcodes[0]) {
 			// Nope. Set flag for allowing control codes to insert spaces
 			ctrlSpace = true;
+			justChangedSpeaker = false;
 			assert(c >= ' ');
 
 			// Check for embedded comments
 			if (c == '{' || c == '}') {
-
-				// TODO: Rose Tattoo checks if no text was added for the last
-				// comment here. In such a case, the last "XXX said" string is
-				// removed here.
-
 				// Comment characters. If we're starting a comment and there's
 				// already text displayed, add a closing quote
 				if (c == '{' && !startOfReply && !commentJustPrinted)
@@ -497,6 +492,15 @@ void Journal::loadJournalFile(bool alreadyLoaded) {
 				commentJustPrinted = false;
 			}
 		} else if (c == opcodes[OP_SWITCH_SPEAKER]) {
+			if (IS_ROSE_TATTOO) {
+				// If the speaker has just changed, then no text has just been added
+				// from the last speaker, so remove the initial "Person said" text
+				if (justChangedSpeaker)
+					journalString = Common::String(journalString.c_str(), journalString.c_str() + beforeLastSpeakerChange);
+
+				justChangedSpeaker = true;
+			}
+
 			if (!startOfReply) {
 				if (!commentFlag && !commentJustPrinted)
 					journalString += "\"\n";
@@ -637,7 +641,6 @@ void Journal::loadJournalFile(bool alreadyLoaded) {
 					replyP++;
 					while (replyP[0] && replyP[0] != opcodes[OP_NPC_DESC_ON_OFF])
 						replyP++;
-					replyP++;
 				} else if (
 					c == opcodes[OP_SET_NPC_INFO_LINE])
 					replyP += replyP[1] + 2;
@@ -655,6 +658,9 @@ void Journal::loadJournalFile(bool alreadyLoaded) {
 
 	if (!startOfReply && !commentJustPrinted)
 		journalString += '"';
+
+	if (IS_ROSE_TATTOO && justChangedSpeaker)
+		journalString = Common::String(journalString.c_str(), journalString.c_str() + beforeLastSpeakerChange);
 
 	// Finally finished building the journal text. Need to process the text to
 	// word wrap it to fit on-screen. The resulting lines are stored in the

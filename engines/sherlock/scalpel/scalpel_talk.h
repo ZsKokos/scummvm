@@ -37,9 +37,12 @@ namespace Scalpel {
 
 class ScalpelTalk : public Talk {
 private:
+	Common::Stack<SequenceEntry> _sequenceStack;
+
 	OpcodeReturn cmdSwitchSpeaker(const byte *&str);
 	OpcodeReturn cmdAssignPortraitLocation(const byte *&str);
 	OpcodeReturn cmdGotoScene(const byte *&str);
+	OpcodeReturn cmdCallTalkFile(const byte *&str);
 	OpcodeReturn cmdClearInfoLine(const byte *&str);
 	OpcodeReturn cmdClearWindow(const byte *&str);
 	OpcodeReturn cmdDisplayInfoLine(const byte *&str);
@@ -63,9 +66,14 @@ protected:
 	virtual void talkWait(const byte *&str);
 
 	/**
-	 * Trigger to play a 3DO talk dialog movie
+	 * Called when the active speaker is switched
 	 */
-	virtual void talk3DOMovieTrigger(int subIndex);
+	virtual void switchSpeaker();
+
+	/**
+	 * Called when a character being spoken to has no talk options to display
+	 */
+	virtual void nothingToSay();
 
 	/**
 	 * Show the talk display
@@ -90,6 +98,32 @@ public:
 	 * Prints a single conversation option in the interface window
 	 */
 	int talkLine(int lineNum, int stateNum, byte color, int lineY, bool slamIt);
+
+	/**
+	 * Trigger to play a 3DO talk dialog movie
+	 */
+	void talk3DOMovieTrigger(int subIndex);
+
+	/**
+	 * Push the details of a passed object onto the saved sequences stack
+	 */
+	virtual void pushSequenceEntry(Object *obj);
+
+	/**
+	 * Pulls a background object sequence from the sequence stack and restore's the
+	 * object's sequence
+	 */
+	virtual void pullSequence(int slot = -1);
+
+	/**
+	 * Returns true if the script stack is empty
+	 */
+	virtual bool isSequencesEmpty() const { return _scriptStack.empty(); }
+
+	/**
+	 * Clears the stack of pending object sequences associated with speakers in the scene
+	 */
+	virtual void clearSequences();
 };
 
 } // End of namespace Scalpel

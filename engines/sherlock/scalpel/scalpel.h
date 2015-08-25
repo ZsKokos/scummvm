@@ -24,7 +24,7 @@
 #define SHERLOCK_SCALPEL_H
 
 #include "sherlock/sherlock.h"
-#include "sherlock/scalpel/darts.h"
+#include "sherlock/scalpel/scalpel_darts.h"
 
 namespace Sherlock {
 
@@ -113,17 +113,17 @@ public:
 	/**
 	 * Takes care of clearing the mirror in scene 12 (mansion drawing room), in case anything drew over it
 	 */
-	void eraseMirror12();
+	void eraseBrumwellMirror();
 
 	/**
 	 * Takes care of drawing Holme's reflection onto the mirror in scene 12 (mansion drawing room)
 	 */
-	void doMirror12();
+	void doBrumwellMirror();
 
 	/**
 	 * This clears the mirror in scene 12 (mansion drawing room) in case anything messed draw over it
 	 */
-	void flushMirror12();
+	void flushBrumwellMirror();
 };
 
 } // End of namespace Scalpel

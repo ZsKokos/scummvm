@@ -411,7 +411,7 @@ void Screen::flushImage(ImageFrame *frame, const Common::Point &pt, int16 *xp, i
 
 void Screen::flushScaleImage(ImageFrame *frame, const Common::Point &pt, int16 *xp, int16 *yp,
 		int16 *width, int16 *height, int scaleVal) {
-	Common::Point imgPos = pt + frame->_offset;
+	Common::Point imgPos(pt.x + frame->sDrawXOffset(scaleVal), pt.y + frame->sDrawYOffset(scaleVal));
 	Common::Rect newBounds(imgPos.x, imgPos.y, imgPos.x + frame->sDrawXSize(scaleVal), 
 		imgPos.y + frame->sDrawYSize(scaleVal));
 	Common::Rect oldBounds(*xp, *yp, *xp + *width, *yp + *height);
@@ -439,9 +439,10 @@ void Screen::flushScaleImage(ImageFrame *frame, const Common::Point &pt, int16 *
 }
 
 void Screen::flushImage(ImageFrame *frame, const Common::Point &pt, Common::Rect &newBounds, int scaleVal) {
-	Common::Point newPos, newSize;
+	Common::Point newPos(newBounds.left, newBounds.top);
+	Common::Point newSize(newBounds.width(), newBounds.height());
 
-	if (scaleVal == 256)
+	if (scaleVal == SCALE_THRESHOLD)
 		flushImage(frame, pt, &newPos.x, &newPos.y, &newSize.x, &newSize.y);
 	else
 		flushScaleImage(frame, pt, &newPos.x, &newPos.y, &newSize.x, &newSize.y, scaleVal);

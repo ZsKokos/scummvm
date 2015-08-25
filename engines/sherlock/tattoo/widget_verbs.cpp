@@ -90,9 +90,10 @@ void WidgetVerbs::load(bool objectsOn) {
 
 			// Add any extra active verbs from the object's verb list
 			for (int idx = 0; idx < 6; ++idx) {
-				if (!ui._bgShape->_use[idx]._verb.empty() && !ui._bgShape->_use[idx]._verb.hasPrefix(" ") &&
-					(ui._bgShape->_use[idx]._target.empty() || ui._bgShape->_use[idx]._target.hasPrefix(" "))) {
-					_verbCommands.push_back(ui._bgShape->_use[idx]._verb);
+				UseType &use = ui._bgShape->_use[idx];
+				if (!use._verb.empty() && !use._verb.hasPrefix(" ") && !use._verb.hasPrefix("*") &&
+					(use._target.empty() || use._target.hasPrefix("*") || use._target.hasPrefix(" "))) {
+					_verbCommands.push_back(use._verb);
 				}
 			}
 		}
@@ -196,10 +197,11 @@ void WidgetVerbs::handleEvents() {
 					// Call the Routine to turn on the Commands for this Object
 					load(!noDesc);
 				} else {
-					// Free the current menu graphics & erase the menu
+					// Close the window and clear the events
 					banishWindow();
+					events.clearEvents();
 
-					// See if we're in a Lab Table Room
+					// Reset the active UI mode
 					ui._menuMode = scene._labTableScene ? LAB_MODE : STD_MODE;
 				}
 			}
@@ -207,6 +209,7 @@ void WidgetVerbs::handleEvents() {
 			// Mouse is within the menu
 			// Erase the menu
 			banishWindow();
+			events.clearEvents();
 
 			// See if they are activating the Look Command
 			if (!_verbCommands[_selector].compareToIgnoreCase(strLook)) {
@@ -222,7 +225,7 @@ void WidgetVerbs::handleEvents() {
 
 			} else if (!_verbCommands[_selector].compareToIgnoreCase(strTalk)) {
 				// Talk command is being activated
-				talk.talk(ui._activeObj);
+				talk.initTalk(ui._activeObj);
 				ui._activeObj = -1;
 			
 			} else if (!_verbCommands[_selector].compareToIgnoreCase(strJournal)) {

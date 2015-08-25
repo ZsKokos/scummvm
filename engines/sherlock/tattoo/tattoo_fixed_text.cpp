@@ -57,6 +57,7 @@ static const char *const FIXED_TEXT_ENGLISH[] = {
 	"with",
 	"No effect...",
 	"This person has nothing to say at the moment",
+	"Picked up",
 
 	"Page %d",
 	"Close Journal", 
@@ -103,14 +104,101 @@ static const char *const FIXED_TEXT_ENGLISH[] = {
 	"Are you sure you",
 	"wish to Quit ?",
 	"Yes",
-	"No"
+	"No",
+	"Enter Password",
+	"Going East"
+};
+
+static const char *const FIXED_TEXT_GERMAN[] = {
+	"Geld",
+	"S. Holmes",
+	"Tabak",
+	"Plan",
+	"Aufforderg.",
+	"Blatt pap.",
+	"Dunstig pap",
+	"Handlampe",
+
+	"Geld",
+	"S. Holmes",
+	"Tabak",
+	"Plan",
+	"Aufforderg.",
+	"Pergament",
+	"Dunstig pap",
+	"Handlampe",
+
+	"ffne",
+	"Schau",
+	"Rede",
+	"Benutze",
+	"Journal",
+	"Inventory",
+	"Options",
+	"Losen",
+	"mit",
+	"Keine Wirkung...",
+	"Diese Person weic im Augenblick nichts zu berichten.",
+
+	"Seite %d",
+	"Schliecen",
+	"Lessen",
+	"In Datei sichern",
+	"Suche abbrechen",
+	"Rbckwarts suchen ",
+	"Vorwarts suchen ",
+	"Text nicht gefunden",
+
+	"Holmes",
+	"Jock",
+	"Bull",
+	"Runde",
+	"Gesamt",
+	"Pfeil",
+	"zum Starten",
+	"Taste dracken",
+	"Taste dracken",
+	"Bullseye",
+	"SPIEL BEENDET",
+	"VERLOREN",
+	"Gewinnt",
+	"Erzielte",
+	"Punkte",
+	"Treffer",
+	"Doppel",
+	"Dreifach",
+
+	"Benutze",
+	"Wasser",
+	"Erhitze",
+	"Spiel laden",
+	"Spiel sichern",
+	"Musik",
+	"Soundeffekte",
+	"Voices",
+	"Textfenster",
+	"Transparente Menbs",
+	"Schriftart andern",
+	"Aus",
+	"An",
+	"Ende",
+	"Spiel beenden? ",
+	"Sind Sie sicher ?",
+	"Ja",
+	"Nein",
+	"Pacwort eingeben",
+	"Going East"
 };
 
 TattooFixedText::TattooFixedText(SherlockEngine *vm) : FixedText(vm) {
+	if (vm->getLanguage() == Common::DE_DEU)
+		_fixedText = FIXED_TEXT_GERMAN;
+	else
+		_fixedText = FIXED_TEXT_ENGLISH;
 }
 
 const char *TattooFixedText::getText(int fixedTextId) {
-	return FIXED_TEXT_ENGLISH[fixedTextId];
+	return _fixedText[fixedTextId];
 }
 
 const Common::String TattooFixedText::getActionMessage(FixedTextActionId actionId, int messageIndex) {
